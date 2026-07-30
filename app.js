@@ -76,8 +76,28 @@ function toast(msg) {
   clearTimeout(t._h); t._h = setTimeout(() => t.style.opacity = '0', 1800);
 }
 
-/* ===================== 跨设备云同步（jsonblob，免密钥） ===================== */
-const SYNC_ID = '019fac86-0a04-76f1-a9a4-63b7ef88f878';
+/* ===================== 跨设备云同步（jsonblob，免密钥，密钥仅存本机） ===================== */
+/* 安全设计：同步密钥不写死在公开代码里。首次运行本地随机生成并存入 localStorage；
+   老用户（已有本地数据）沿用 LEGACY_SYNC_ID 迁移以保留云端数据；公开部署时 LEGACY_SYNC_ID 为空，自动生成新密钥。 */
+const KEY_SYNC = 'workstation_sync_id';
+const LEGACY_SYNC_ID = '';
+function genUuid() {
+  try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+function loadSyncId() {
+  let id = localStorage.getItem(KEY_SYNC);
+  if (!id) {
+    if (localStorage.getItem(KEY) && LEGACY_SYNC_ID) id = LEGACY_SYNC_ID;  // 迁移老用户
+    else id = genUuid();
+    localStorage.setItem(KEY_SYNC, id);
+  }
+  return id;
+}
+let SYNC_ID = loadSyncId();
 let SYNC_URL = 'https://jsonblob.com/api/jsonBlob/' + SYNC_ID;
 let _syncTimer = null;
 function setPill(state) {
@@ -95,7 +115,7 @@ function pushToCloud(immediate) {
       .then(r => {
         if (r.status === 404) {
           return fetch('https://jsonblob.com/api/jsonBlob', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(S) })
-            .then(rr => { const loc = rr.headers.get('Location'); if (loc) { SYNC_URL = 'https://jsonblob.com' + loc; } return 'recreated'; });
+            .then(rr => { const loc = rr.headers.get('Location'); if (loc) { SYNC_URL = 'https://jsonblob.com' + loc; const nid = loc.split('/').pop(); SYNC_ID = nid; localStorage.setItem(KEY_SYNC, nid); } return 'recreated'; });
         }
         return 'ok';
       })
@@ -858,6 +878,37 @@ $('backupImport').onchange = (e) => {
   reader.readAsText(f);
 };
 
+/* ===================== 同步密钥管理（隐私：密钥只在本机，不进公开代码） ===================== */
+function renderSyncKey() { const el = $('syncKeyText'); if (el) el.textContent = SYNC_ID; }
+$('syncKeyCopy').onclick = () => {
+  const t = SYNC_ID;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('已复制同步密钥 ✓'), () => toast('复制失败，请手动选择'));
+  else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('已复制同步密钥 ✓'); } catch (e) { toast('复制失败，请手动选择'); } ta.remove(); }
+};
+$('syncKeyNew').onclick = () => {
+  if (!confirm('生成新密钥会创建一个全新的私有数据保险箱，并把当前全部数据复制到新箱。\n旧密钥将不再使用（建议在其它设备也改用新密钥）。继续？')) return;
+  const nid = genUuid();
+  SYNC_ID = nid; localStorage.setItem(KEY_SYNC, nid); SYNC_URL = 'https://jsonblob.com/api/jsonBlob/' + nid;
+  save();                 // 把当前数据推到新箱
+  renderSyncKey();
+  toast('已生成私有新密钥，数据已迁入 🔒');
+};
+$('syncKeyApply').onclick = () => {
+  const v = $('syncKeyInput').value.trim();
+  if (!v) return;
+  if (!confirm('应用此密钥会尝试从该密钥对应的云端数据拉取（用于把本机连到另一台设备的数据）。\n若本机已有数据且较新，可能被覆盖。建议先「导出全部数据」备份。继续？')) { $('syncKeyInput').value = ''; return; }
+  SYNC_ID = v; localStorage.setItem(KEY_SYNC, v); SYNC_URL = 'https://jsonblob.com/api/jsonBlob/' + v;
+  setPill('syncing');
+  fetch(SYNC_URL).then(r => {
+    if (r.status === 404) { setPill('ok'); renderSyncKey(); $('syncKeyInput').value = ''; toast('已连接（云端暂无数据）'); return; }
+    if (!r.ok) { setPill('offline'); return; }
+    return r.json().then(data => {
+      if (data && Object.keys(data).length) { Object.assign(S, data); normalize(S); localStorage.setItem(KEY, JSON.stringify(S)); renderAll(); }
+      setPill('ok'); renderSyncKey(); $('syncKeyInput').value = ''; toast('已连接并同步 ✓');
+    });
+  }).catch(() => setPill('offline'));
+};
+
 /* ===================== 启动 ===================== */
 function ensureSeeds() {
   if (!S.life.ledgers.length) { S.life.ledgers.push({ id: uid(), name: '我的账本', icon: '💰', txns: [] }); S.life.activeLedger = S.life.ledgers[0].id; }
@@ -875,6 +926,7 @@ function renderAll() {
 ensureSeeds();
 $('txnDate').value = todayStr();
 renderAll();                 // 先用本地数据渲染
+renderSyncKey();
 pushToCloud(true);           // 把种子数据同步上去
 pullFromCloud().then(renderAll);  // 再从云端拉取最新，覆盖渲染
 checkReminders(); setInterval(checkReminders, 60000);  // 打卡提醒：每分钟检查一次
