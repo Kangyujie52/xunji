@@ -1,6 +1,6 @@
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260731n8';                                // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260731n9';                                // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -1511,6 +1511,7 @@ const Pet3DGLB = {
     host.appendChild(rd.domElement);
 
     scene.add(new T.AmbientLight(0xffffff, .75));
+    scene.add(new T.HemisphereLight(0xffffff, 0x9aa7b2, .55));
     const key = new T.DirectionalLight(0xffffff, 1.0); key.position.set(2, 4, 3); scene.add(key);
     const rim = new T.DirectionalLight(0xffffff, .55); rim.position.set(-3, 2, -2); scene.add(rim);
     const fill = new T.DirectionalLight(0xffffff, .35); fill.position.set(0, -1, 2); scene.add(fill);
@@ -1581,8 +1582,23 @@ const Pet3DGLB = {
     const url = this.POSE_URL[key]; if (!url) { cb(null); return; }
     new this.GLTFLoader().load(url, gltf => {
       const model = gltf.scene;
-      /* 归一化：居中 + 缩放到统一大小，让三种姿态切换时体型一致 */
       const T = self.THREE;
+      /* 图生 3D 的 GLB 多为金属 PBR 材质但无环境贴图 → 金属度=1 时会反射黑环境而几乎全黑，
+         在透明画布上看起来就是空白。统一改：去金属化 + 双面 + 关透明，确保漫反射贴图可见。 */
+      model.traverse(o => {
+        if (o.isMesh && o.material) {
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(m => {
+            m.metalness = 0.0;
+            m.roughness = 0.7;
+            m.side = T.DoubleSide;
+            if (m.map) m.map.encoding = T.sRGBEncoding;
+            m.transparent = false;
+            m.needsUpdate = true;
+          });
+        }
+      });
+      /* 归一化：居中 + 缩放到统一大小，让三种姿态切换时体型一致 */
       const box = new T.Box3().setFromObject(model);
       const center = box.getCenter(new T.Vector3());
       const size = box.getSize(new T.Vector3());
