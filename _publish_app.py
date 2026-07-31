@@ -10,7 +10,7 @@ BASE = pathlib.Path(__file__).resolve().parent
 BLOB_ID = '019fb66b-321a-7c45-9520-56f68e87b0bd'
 BLOB_URL = f'https://jsonblob.com/api/jsonBlob/{BLOB_ID}'
 
-APP_VERSION = '20260731n7'  # 与 app.js 中 APP_VERSION 保持一致
+APP_VERSION = '20260731n8'  # 与 app.js 中 APP_VERSION 保持一致
 DOWNLOAD_NAME = 'workstation_single.html'  # 与本地副本同名，便于覆盖
 
 def main():

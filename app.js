@@ -1,6 +1,6 @@
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260731n7';                                // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260731n8';                                // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -1566,7 +1566,13 @@ const Pet3DGLB = {
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
   },
 
-  POSE_URL: { sit: 'assets/cat_sit.glb', loaf: 'assets/cat_loaf.glb', walk: 'assets/cat_walk.glb' },
+  /* 用 GitHub Pages 绝对路径加载 GLB：单文件版本地打开时旁边没有 assets/ 文件夹，
+     相对路径会失败并降级成静态图片；绝对路径经测试 CORS 已放行，3D 才能正常出来。 */
+  POSE_URL: {
+    sit:  APP_HOME_URL + 'assets/cat_sit.glb',
+    loaf: APP_HOME_URL + 'assets/cat_loaf.glb',
+    walk: APP_HOME_URL + 'assets/cat_walk.glb'
+  },
 
   /* 载入一个姿态模型（带缓存），cb(model|null) */
   fetchModel(key, cb) {
