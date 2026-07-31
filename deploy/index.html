@@ -5816,7 +5816,7 @@ const APP_ICONS = {
 <script>
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260731n11';                               // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260731n12';                               // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -7480,31 +7480,31 @@ const Pet3DGLB = {
 
     const R = this.rig, now = performance.now(), t = (now - this.t0) / 1000;
     if (R) {
-      /* —— 常驻：明显呼吸（挤压拉伸）+ 上下浮动，2.6s 一呼一吸，清晰可见 —— */
-      const br = Math.sin(t * 2.4);
-      let sx = 1 - br * .024, sy = 1 + br * .048;
-      let px = 0, py = br * .055, pz = 0;
-      /* —— 常驻：缓慢左右张望 + 轻微点头/侧倾，保证一直“活着” —— */
-      let rx = Math.sin(t * 1.05) * .06;
-      let ry = Math.sin(t * 1.25) * .45 + Math.sin(t * .37) * .18;   // 左右摇头 ±~36°
-      let rz = Math.sin(t * .9) * .05;
+      /* —— 常驻：轻柔呼吸（整体均匀缩放，不形变）+ 微小上下浮动 —— */
+      const br = Math.sin(t * 1.6);
+      let um = 1 + br * .012;                     // 均匀缩放 ±1.2%，猫不会变胖/变瘦
+      let px = 0, py = br * .018, pz = 0;         // 上下轻晃，幅度很小
+      /* —— 常驻：极缓慢左右张望 + 几乎不可见的点头/侧倾 —— */
+      let rx = Math.sin(t * .55) * .025;
+      let ry = Math.sin(t * .42) * .12 + Math.sin(t * .17) * .05;   // 左右摇头 ±~8°
+      let rz = Math.sin(t * .40) * .022;
 
-      /* —— 空闲小动作：每 3.5~6 秒随机甩头 / 抖毛 / 小跳 / 抖耳 —— */
+      /* —— 空闲小动作：每 6~10 秒一次，幅度克制，像真猫一样慵懒 —— */
       if (now > this.idleEvt) {
-        this.idleEvt = now + 3500 + Math.random() * 2500;
+        this.idleEvt = now + 6000 + Math.random() * 4000;
         this.idleKind = ['shake', 'hop', 'turn', 'flick'][Math.floor(Math.random() * 4)];
         this._idleT0 = now;
       }
-      const ip = (now - (this._idleT0 || 0)) / 650;
+      const ip = (now - (this._idleT0 || 0)) / 900;
       if (ip >= 0 && ip < 1 && !this.act) {
         const is = Math.sin(ip * Math.PI);
-        if (this.idleKind === 'shake') { rz += Math.sin(ip * Math.PI * 7) * .16; ry += Math.sin(ip * Math.PI * 6) * .34; }
-        else if (this.idleKind === 'hop') { py += is * .34; sy += is * .10; sx -= is * .07; }
-        else if (this.idleKind === 'flick') { rx += Math.sin(ip * Math.PI * 8) * .15; }
-        else { ry += is * 1.10; }
+        if (this.idleKind === 'shake') { rz += Math.sin(ip * Math.PI * 5) * .08; ry += Math.sin(ip * Math.PI * 4) * .16; }
+        else if (this.idleKind === 'hop') { py += is * .10; um += is * .02; }     // 均匀缩放，不变形
+        else if (this.idleKind === 'flick') { rx += Math.sin(ip * Math.PI * 6) * .07; }
+        else { ry += is * .35; }                   // 慢半拍转身
       }
 
-      /* —— 动作叠加 —— */
+      /* —— 陪玩动作：贴近真实猫，以旋转/小位移为主，禁用非均匀缩放 —— */
       const A = this.act;
       if (A) {
         const p = (now - A.t0) / A.dur;
@@ -7512,49 +7512,44 @@ const Pet3DGLB = {
         else {
           const s = Math.sin(p * Math.PI);                 // 0→1→0
           switch (A.name) {
-            case 'poke': case 'pounce':                    // 逗猫/扑：蓄力后前扑
-              pz += s * .85; py += Math.sin(p * Math.PI * 2) * .34;
-              rx += -s * .40; sy += s * .08;
+            case 'poke': case 'pounce':                    // 逗猫/扑：轻探头 + 前倾
+              rx += -s * .14; pz += s * .15; um += s * .02;
               break;
-            case 'ball': case 'chase':                     // 追球：左右冲刺 + 侧倾
-              px += Math.sin(p * Math.PI * 2) * 1.15;
-              rz += -Math.sin(p * Math.PI * 2) * .28;
-              ry += Math.sin(p * Math.PI * 2) * 1.35;
-              py += Math.abs(Math.sin(p * Math.PI * 6)) * .22;
+            case 'ball': case 'chase':                     // 追球：小幅侧扑
+              px += Math.sin(p * Math.PI * 2) * .32;
+              rz += -Math.sin(p * Math.PI * 2) * .10;
+              ry += Math.sin(p * Math.PI * 2) * .35;
+              py += Math.abs(Math.sin(p * Math.PI * 4)) * .05;
               break;
-            case 'comb': case 'brush':                     // 梳毛：舒服地扭动
-              rz += Math.sin(p * Math.PI * 7) * .13;
-              ry += Math.sin(p * Math.PI * 3) * .35;
-              sx += Math.sin(p * Math.PI * 5) * .03;
+            case 'comb': case 'brush':                     // 梳毛：舒服地轻扭
+              rz += Math.sin(p * Math.PI * 5) * .06;
+              ry += Math.sin(p * Math.PI * 3) * .18;
               break;
-            case 'sun':                                    // 晒太阳：伸懒腰后瘫软
-              sy += -s * .13; sx += s * .10; pz += s * .18;
-              rx += s * .10; py -= s * .05;
+            case 'sun':                                    // 晒太阳：轻微舒展
+              um += s * .03; pz += s * .08; rx += s * .05; py -= s * .02;
               break;
-            case 'walk':                                   // 散步：左右踱步 + 转身
-              px += Math.sin(p * Math.PI * 2) * .95;
-              ry += Math.sin(p * Math.PI * 2) * 1.55;
-              py += Math.abs(Math.sin(p * Math.PI * 8)) * .14;
+            case 'walk':                                   // 散步：小步踱 + 转身
+              px += Math.sin(p * Math.PI * 2) * .28;
+              ry += Math.sin(p * Math.PI * 2) * .45;
+              py += Math.abs(Math.sin(p * Math.PI * 6)) * .04;
               break;
-            case 'snap': case 'photo':                     // 拍照：转正面 + 挺身
-              ry *= (1 - s); py += s * .13; sy += s * .07; sx -= s * .04;
+            case 'snap': case 'photo':                     // 拍照：转正 + 微挺身
+              ry *= (1 - s); py += s * .04; um += s * .02;
               break;
-            case 'chew':                                   // 吃饭：低头连续点头
-              rx += .16 + Math.sin(p * Math.PI * 10) * .09;
-              py -= s * .07;
+            case 'chew':                                   // 吃饭：低头小幅点头
+              rx += .08 + Math.sin(p * Math.PI * 8) * .05;
+              py -= s * .03;
               break;
-            default:                                       // bounce：弹跳两下
-              py += Math.abs(Math.sin(p * Math.PI * 2)) * .62;
-              sy += Math.sin(p * Math.PI * 2) * .09;
-              sx -= Math.sin(p * Math.PI * 2) * .06;
-              rz += Math.sin(p * Math.PI * 3) * .10;
+            default:                                       // bounce：小跳
+              py += Math.abs(Math.sin(p * Math.PI * 2)) * .16;
+              um += Math.sin(p * Math.PI * 2) * .02;
           }
         }
       }
 
       R.position.set(px, py, pz);
       R.rotation.set(rx, ry, rz);
-      R.scale.set(sx, sy, sx);
+      R.scale.set(um, um, um);
     }
 
     if (this.controls) this.controls.update();
