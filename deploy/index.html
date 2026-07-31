@@ -5816,7 +5816,7 @@ const APP_ICONS = {
 <script>
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260731n9';                                // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260731n10';                               // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -8081,10 +8081,13 @@ function checkAppUpdate() {
 }
 $('appUpdateBtn').onclick = () => {
   const bar = $('appUpdateBar'); if (bar) bar.style.display = 'none';
-  // 现在托管在 GitHub Pages，点击直接跳转到最新在线版
-  // 用 location.href 而非 window.open，避免本地 file:// 打开时被浏览器弹窗拦截
-  toast('即将跳转到最新版：' + APP_HOME_URL);
-  setTimeout(() => { window.location.href = APP_HOME_URL; }, 600);
+  // 下载最新单文件版到本地，覆盖旧文件后重新打开即可（不再每次弹提示）
+  toast('正在下载最新版…');
+  const a = document.createElement('a');
+  a.href = APP_HOME_URL + 'workstation_single.html?v=' + Date.now();
+  a.download = '个人工作台_单文件版.html';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); toast('下载完成，请用新文件覆盖旧版后重新打开'); }, 1200);
 };
 
 </script>
