@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>我的个人工作台</title>
-  <link rel="stylesheet" href="style.css?v=20260730c" />
+  <title>寻己 · 个人工作台</title>
+  <link rel="stylesheet" href="style.css?v=20260731n6" />
 </head>
 <body>
   <div class="bg-blobs"><span></span><span></span><span></span></div>
@@ -14,22 +14,30 @@
     <header class="topbar glass">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <button class="btn sm ghost icon-btn" id="sideToggle" title="显示 / 隐藏左侧导台">☰</button>
-        <span style="font-size:20px;">🌿</span>
-        <strong style="font-size:17px;">我的工作台</strong>
+        <img class="top-avatar" id="topAvatar" alt="" style="display:none;" /><span id="topEmoji" style="font-size:20px;">🌿</span>
+        <strong style="font-size:17px;">寻己</strong>
         <span class="name-edit" id="nameEdit" contenteditable="true" spellcheck="false" title="点击修改昵称">我</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
+        <button class="theme-btn" id="themeToggle" title="切换 晨光宣纸 / 暮色沉香 主题">🌙</button>
         <span id="syncPill" class="sync-pill syncing">☁️ 同步中…</span>
         <button class="btn sm ghost" id="syncBtn">立即同步</button>
       </div>
     </header>
+
+    <!-- 更新提示条（云端自检更新，无需部署） -->
+    <div id="appUpdateBar" class="app-update-bar" style="display:none;">
+      <span class="aub-txt">🔔 发现新版本 <b id="appUpdateVer"></b>，点击下载最新版</span>
+      <button class="btn sm" id="appUpdateBtn">下载更新</button>
+    </div>
 
     <div class="layout" id="layout">
       <!-- 左侧导台 -->
       <aside class="sidebar glass" id="sidebar">
         <div class="nav-title">导台</div>
         <nav class="nav">
-          <div class="nav-item active" data-panel="work"><span class="nav-ico">💼</span>工作</div>
+          <div class="nav-item active" data-panel="home"><span class="nav-ico">🏠</span>首页</div>
+          <div class="nav-item" data-panel="work"><span class="nav-ico">💼</span>工作</div>
           <div class="nav-group-parent" data-group="life"><span class="nav-ico">🌿</span>生活<span class="chev">▾</span></div>
           <div class="nav-sub" data-subgroup="life">
             <div class="nav-item" data-panel="ledger"><span class="nav-ico">💰</span>账本</div>
@@ -50,8 +58,31 @@
 
       <!-- 主内容 -->
       <main class="content">
+        <!-- 首页 -->
+        <section class="panel active" id="panel-home">
+          <div class="grid">
+            <div class="card glass home-hero" style="grid-column:1/-1;">
+              <img class="home-avatar" id="homeAvatar" alt="寻己" style="display:none;" />
+              <div class="home-hero-txt">
+                <div class="home-logo">寻己</div>
+                <div class="home-slogan">向内探索，记录真实的自己</div>
+                <div class="home-date" id="homeDate"></div>
+                <div class="home-greet" id="homeGreet"></div>
+              </div>
+            </div>
+            <div class="card glass" style="grid-column:1/-1;">
+              <h3><span class="ico">🧭</span>快速进入</h3>
+              <div class="home-modules" id="homeModules"></div>
+            </div>
+            <div class="card glass" style="grid-column:1/-1;">
+              <h3><span class="ico">📊</span>今日概览</h3>
+              <div class="home-overview" id="homeOverview"></div>
+            </div>
+          </div>
+        </section>
+
         <!-- 工作 -->
-        <section class="panel active" id="panel-work">
+        <section class="panel" id="panel-work">
           <div class="grid">
             <div class="card glass" style="grid-column: 1 / -1;">
               <h3><span class="ico">🗂️</span>工作项目看板 <span class="hint" style="margin-left:auto;font-size:12px;">（工作分类待你确定后可细分，现在先自由记录）</span></h3>
@@ -75,6 +106,53 @@
                 <input id="ledgerNewName" placeholder="新账本名称，如：家庭账 / 生意账" style="flex:1;" />
                 <button class="btn" id="ledgerNew">+ 新建账本</button>
               </div>
+
+              <!-- 全局流水搜索（跨账本） -->
+              <details class="tags-box">
+                <summary>🔍 流水搜索 <span class="hint" style="font-weight:normal;">（可搜全部账本）</span></summary>
+                <div class="lg-filter" style="margin-top:12px;">
+                  <select id="fltLedger" title="账本"><option value="">全部账本</option></select>
+                  <select id="fltType" title="类型">
+                    <option value="">全部类型</option>
+                    <option value="exp">仅支出</option>
+                    <option value="inc">仅收入</option>
+                  </select>
+                  <select id="fltTag" title="分类"><option value="">全部分类</option></select>
+                  <input id="fltKw" placeholder="搜索备注/金额" style="flex:1 1 130px;min-width:120px;" />
+                  <input id="fltFrom" type="date" title="起始日期" />
+                  <span style="align-self:center;color:var(--text-faint);font-size:13px;">至</span>
+                  <input id="fltTo" type="date" title="结束日期" />
+                  <button class="btn sm" id="fltApply">搜索</button>
+                  <button class="btn sm ghost" id="fltClear">清空</button>
+                </div>
+                <div id="fltInfo" class="hint" style="margin:0 0 8px;color:var(--text-faint);font-size:12px;"></div>
+                <div class="list" id="gsList" style="max-height:340px;"></div>
+              </details>
+
+              <!-- 通用设置：分类标签（所有账本共用） -->
+              <details class="tags-box">
+                <summary>🏷️ 分类标签管理 <span class="hint" style="font-weight:normal;">（所有账本通用）</span></summary>
+                <div class="row" style="margin-top:12px;">
+                  <input id="tagIcon" placeholder="图标emoji，如 🍜" style="flex:0 0 130px;" maxlength="4" />
+                  <input id="tagName" placeholder="标签名，如 餐饮" style="flex:1;" />
+                  <input id="tagColor" type="color" value="#7aa2ff" title="标签颜色（用于占比条）" style="flex:0 0 44px;padding:2px;height:38px;" />
+                  <button class="btn sm" id="tagAdd">+ 标签</button>
+                </div>
+                <div class="hint" style="margin:0 0 6px;">点下面的图标快速填入：</div>
+                <div class="tag-palette" id="tagPalettePresets"></div>
+                <div class="list" id="tagList" style="max-height:170px;"></div>
+              </details>
+
+              <!-- 通用设置：支付方式（所有账本共用） -->
+              <details class="tags-box">
+                <summary>💳 支付方式管理 <span class="hint" style="font-weight:normal;">（所有账本通用）</span></summary>
+                <div class="row" style="margin-top:12px;">
+                  <input id="payIcon" placeholder="图标emoji，如 💳" style="flex:0 0 130px;" maxlength="4" />
+                  <input id="payName" placeholder="方式名，如 支付宝" style="flex:1;" />
+                  <button class="btn sm" id="payAdd">+ 方式</button>
+                </div>
+                <div class="list" id="payList" style="max-height:170px;"></div>
+              </details>
             </div>
 
             <!-- 视图2：某个账本明细 -->
@@ -105,6 +183,17 @@
               <div id="ledgerSummary"></div>
               <div id="ledgerTagSummary" class="tag-sum-wrap"></div>
 
+              <!-- 收支趋势 -->
+              <h4 class="sec-h">收支趋势（近 6 个月）</h4>
+              <div class="trend-wrap">
+                <div class="trend-legend">
+                  <span><i class="lg-dot inc"></i>收入</span>
+                  <span><i class="lg-dot exp"></i>支出</span>
+                  <span><i class="lg-dot net"></i>结余</span>
+                </div>
+                <canvas id="ledgerTrend" height="240"></canvas>
+              </div>
+
               <!-- 记一笔 -->
               <h4 class="sec-h">记一笔</h4>
               <div class="row">
@@ -121,31 +210,6 @@
                 <input id="txnNote" placeholder="备注（可选）" style="flex:1;" />
                 <button class="btn" id="txnAdd">记一笔</button>
               </div>
-
-              <!-- 标签管理 -->
-              <details class="tags-box">
-                <summary>🏷️ 分类标签管理（点击展开）</summary>
-                <div class="row" style="margin-top:12px;">
-                  <input id="tagIcon" placeholder="图标emoji，如 🍜" style="flex:0 0 130px;" maxlength="4" />
-                  <input id="tagName" placeholder="标签名，如 餐饮" style="flex:1;" />
-                  <input id="tagColor" type="color" value="#7aa2ff" title="标签颜色（用于占比条）" style="flex:0 0 44px;padding:2px;height:38px;" />
-                  <button class="btn sm" id="tagAdd">+ 标签</button>
-                </div>
-                <div class="hint" style="margin:0 0 6px;">点下面的图标快速填入：</div>
-                <div class="tag-palette" id="tagPalettePresets"></div>
-                <div class="list" id="tagList" style="max-height:170px;"></div>
-              </details>
-
-              <!-- 支付方式管理 -->
-              <details class="tags-box">
-                <summary>💳 支付方式管理（点击展开）</summary>
-                <div class="row" style="margin-top:12px;">
-                  <input id="payIcon" placeholder="图标emoji，如 💳" style="flex:0 0 130px;" maxlength="4" />
-                  <input id="payName" placeholder="方式名，如 支付宝" style="flex:1;" />
-                  <button class="btn sm" id="payAdd">+ 方式</button>
-                </div>
-                <div class="list" id="payList" style="max-height:170px;"></div>
-              </details>
 
               <!-- 流水 -->
               <h4 class="sec-h">流水</h4>
@@ -181,6 +245,7 @@
 
               <!-- 统计 -->
               <div class="stat-row" id="checkinStats"></div>
+              <div class="goal-box" id="checkinGoal"></div>
 
               <!-- 今日打卡 -->
               <div class="today-box" id="checkinToday"></div>
@@ -218,35 +283,93 @@
           <div class="grid">
             <div class="card glass">
               <h3><span class="ico">💡</span>灵感随想</h3>
-              <div class="hint">一闪而过的想法，随时记下来。</div>
+              <div class="hint">一闪而过的想法，随时记下来；重要的点子还能跟进孵化。</div>
               <div class="row">
                 <textarea id="noteInput" placeholder="写下此刻的灵感…"></textarea>
               </div>
-              <div class="row">
-                <button class="btn" id="noteAdd">保存随想</button>
+              <div class="row" style="align-items:center;flex-wrap:wrap;">
+                <span class="hint" style="margin:0;">分类：</span>
+                <div class="note-cat-pick" id="noteCatPick"></div>
+                <button class="btn" id="noteAdd" style="margin-left:auto;">保存随想</button>
               </div>
-              <div class="list" id="noteList"></div>
+              <div id="noteStats" class="note-stats"></div>
+
+              <!-- 搜索与筛选 -->
+              <div class="lg-filter" style="margin-top:14px;">
+                <input id="noteKw" placeholder="🔍 搜索灵感内容" style="flex:1 1 150px;min-width:130px;" />
+                <select id="noteFltCat" title="分类"><option value="">全部分类</option></select>
+                <select id="noteFltStatus" title="状态">
+                  <option value="">全部状态</option>
+                  <option value="idea">💭 闪念</option>
+                  <option value="grow">🌱 孵化中</option>
+                  <option value="done">✅ 已实现</option>
+                  <option value="drop">🗑 已放弃</option>
+                </select>
+                <button class="btn sm ghost" id="noteFltClear">清空</button>
+              </div>
+              <div id="noteFltInfo" class="hint" style="margin:0 0 8px;color:var(--text-faint);font-size:12px;"></div>
+
+              <!-- 便签墙（按月归档） -->
+              <div id="noteWall"></div>
             </div>
           </div>
         </section>
 
-        <!-- 孩子学习激励 -->
+        <!-- 孩子学习激励（养宠物玩法） -->
         <section class="panel" id="panel-child">
           <div class="grid">
+            <!-- 宠物之家 -->
             <div class="card glass">
-              <h3><span class="ico">🌟</span>孩子学习激励</h3>
-              <div class="row" style="align-items:center;">
-                <span class="hint" style="margin:0;">积分</span>
-                <span class="points" id="childPoints">0</span>
-                <button class="btn sm" id="childPointAdd">+1 奖励</button>
+              <h3><span class="ico">🐱</span>宠物之家
+                <span style="margin-left:auto;font-size:14px;color:var(--text-faint);">⭐ 星星：<b id="childStars" style="color:var(--accent);font-size:18px;">0</b></span>
+              </h3>
+              <div class="pet-stage">
+                <div class="pet-visual" id="petVisual">🥚</div>
+                <div class="pet-info">
+                  <div class="pet-name-row">
+                    <span class="pet-name" id="petName">小猫咪</span>
+                    <button class="btn sm ghost" id="petRename" title="改名">✏️</button>
+                    <span class="pet-lv" id="petLv">Lv.1 · 神秘蛋</span>
+                  </div>
+                  <div class="pet-talk" id="petTalk">…</div>
+                  <div class="pet-bar-row"><span class="pet-bar-lab">成长</span><div class="pet-bar"><div class="pet-bar-fill exp" id="petExpBar"></div></div><span class="pet-bar-val" id="petExpVal"></span></div>
+                  <div class="pet-bar-row"><span class="pet-bar-lab">饱食</span><div class="pet-bar"><div class="pet-bar-fill hunger" id="petHungerBar"></div></div><span class="pet-bar-val" id="petHungerVal"></span></div>
+                  <div class="pet-bar-row"><span class="pet-bar-lab">心情</span><div class="pet-bar"><div class="pet-bar-fill mood" id="petMoodBar"></div></div><span class="pet-bar-val" id="petMoodVal"></span></div>
+                  <div class="row" style="margin-top:10px;">
+                    <button class="btn sm" id="petFeed">🍚 喂食（1⭐）</button>
+                  </div>
+                </div>
               </div>
-              <div class="msg-box" id="childMsg">点击「换一句」给孩子打气 ✨</div>
+              <div class="hint" style="margin:14px 0 6px;">🎾 陪它玩一会儿（不同动作效果不同）</div>
+              <div class="pet-acts" id="petActs"></div>
+              <details class="tags-box" id="petAlbumBox" style="margin-top:12px;">
+                <summary>📷 我们的合照（<span id="petAlbumCount">0</span> 张）</summary>
+                <div class="pet-album-list" id="petAlbumList" style="max-height:260px;margin-top:10px;overflow-y:auto;"></div>
+              </details>
+              <div class="pet-badges-wrap">
+                <div class="hint" style="margin:10px 0 6px;">🏅 打卡徽章（连续完成任务解锁）　连续 <b id="childStreak">0</b> 天</div>
+                <div class="pet-badges" id="childBadges"></div>
+              </div>
+            </div>
+            <!-- 今日任务 -->
+            <div class="card glass">
+              <h3><span class="ico">📋</span>今日任务 <span id="childTaskDate" style="margin-left:auto;font-size:13px;color:var(--text-faint);"></span></h3>
+              <div class="hint" id="childTaskProg">完成任务赚星星，去喂养宠物吧</div>
+              <div class="list" id="childTaskList" style="max-height:260px;"></div>
+              <div class="row" style="margin-top:10px;">
+                <input id="childTaskName" placeholder="添加任务，如：阅读30分钟" style="flex:1;" />
+                <select id="childTaskStars" style="flex:0 0 92px;">
+                  <option value="1">⭐×1</option>
+                  <option value="2">⭐×2</option>
+                  <option value="3">⭐×3</option>
+                  <option value="5">⭐×5</option>
+                </select>
+                <button class="btn sm" id="childTaskAdd">+ 任务</button>
+              </div>
+              <div class="msg-box" id="childMsg" style="margin-top:12px;">点击「换一句」给孩子打气 ✨</div>
               <div class="row">
                 <button class="btn ghost sm" id="childMsgBtn">换一句鼓励</button>
-                <input id="childGoal" placeholder="小目标，如：连续背诗7天" style="flex:1;" />
-                <button class="btn sm" id="childGoalAdd">+目标</button>
               </div>
-              <div class="list" id="childGoalList" style="max-height:140px;"></div>
             </div>
           </div>
         </section>
@@ -275,18 +398,24 @@
         <section class="panel" id="panel-stocks">
           <div class="grid">
             <div class="card glass">
-              <h3><span class="ico">📈</span>股市学习</h3>
-              <div class="hint">学习笔记 + 自选观察（点代码跳转行情）。</div>
+              <h3><span class="ico">📈</span>股市学习 · 自选行情</h3>
+              <div class="hint">真实行情来自腾讯财经（免密钥）。收盘后显示最近收盘价。</div>
               <div class="row">
                 <input id="stockCode" placeholder="代码 如 600519" style="flex:0 0 110px;" />
                 <input id="stockName" placeholder="名称 如 贵州茅台" />
                 <button class="btn" id="stockAdd">+ 自选</button>
               </div>
+              <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span class="hint" id="stockUpdate" style="margin:0;"></span>
+                <button class="btn ghost sm" id="stockRefresh">↻ 刷新行情</button>
+              </div>
+              <div class="list" id="stockWatchList" style="max-height:230px;"></div>
+              <hr class="sep" />
+              <div class="sec-h">学习笔记</div>
               <div class="row">
                 <textarea id="stockNote" placeholder="今天学到的：…"></textarea>
                 <button class="btn ghost" id="stockNoteAdd">记笔记</button>
               </div>
-              <div class="list" id="stockWatchList" style="max-height:130px;"></div>
               <div class="list" id="stockNoteList" style="max-height:120px;"></div>
             </div>
           </div>
@@ -304,6 +433,7 @@
                 <input id="backupImport" type="file" accept=".json,application/json" style="display:none;" />
               </div>
               <div class="hint" style="margin-top:10px;" id="backupHint">提示：建议每隔一段时间导一份备份，存在手机 / 电脑 / 网盘任意一处即可。</div>
+              <div class="hint" style="margin-top:6px;">当前程序版本：<b id="curVerText" style="color:var(--good);">—</b>　·　打开时若顶部出现「发现新版本」横幅，请到对话中重新下载最新文件覆盖即可。</div>
 
               <h4 class="sec-h" style="margin-top:18px;">☁️ 云端同步密钥</h4>
               <div class="hint">这是你数据的「保险箱钥匙」，<b>只存在你本机浏览器，不会写进任何公开代码</b>。把它复制到另一台设备粘贴，即可共用同一份数据；想彻底私有可点「生成新密钥」。</div>
@@ -316,6 +446,19 @@
                 <input id="syncKeyInput" placeholder="粘贴另一台设备的密钥" style="flex:1;min-width:200px;" />
                 <button class="btn sm" id="syncKeyApply">应用此密钥并同步</button>
               </div>
+
+              <h4 class="sec-h" style="margin-top:18px;">🔒 专属云端（推荐 · 你自己的 GitHub 私有仓库）</h4>
+              <div class="hint">填好下面三项并保存后，数据将改存到<b>你自己的私有仓库</b>：永久保存、带历史版本、完全归你。当前数据会自动搬过去，公共云仅作旧版兜底。</div>
+              <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input id="ghUser" placeholder="GitHub 用户名，如 kangyujie52" style="flex:1;min-width:160px;" />
+                <input id="ghRepo" placeholder="数据仓库名，如 xunji-data" style="flex:1;min-width:160px;" />
+              </div>
+              <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input id="ghToken" type="password" placeholder="访问令牌（ghp_ 或 github_pat_ 开头）" style="flex:1;min-width:220px;" />
+                <button class="btn sm" id="ghSave">保存并迁移数据</button>
+                <button class="btn sm ghost" id="ghOff" style="display:none;">断开专属云端</button>
+              </div>
+              <div class="hint" style="margin-top:8px;" id="ghStatus">当前：未配置，仍使用公共云同步。</div>
             </div>
           </div>
         </section>
@@ -339,7 +482,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20260730c"></script>
+  <script src="icons.js?v=20260731n6"></script>
+  <script src="app.js?v=20260731n6"></script>
 </body>
 </html>
