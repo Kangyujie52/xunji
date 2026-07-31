@@ -1,6 +1,6 @@
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260731n6';                                // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260731n7';                                // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -1473,6 +1473,11 @@ const Pet3DGLB = {
     if (this.ready) { cb && cb(true); return; }
     if (this.failed) { cb && cb(false); return; }
     if (this.loading) { (this._q = this._q || []).push(cb); return; }
+    /* 页面已内联 three 全家桶（window.THREE + GLTFLoader + OrbitControls 均存在）→ 直接启用，彻底不依赖外部 CDN */
+    if (window.THREE && window.THREE.GLTFLoader && window.THREE.OrbitControls) {
+      this.THREE = window.THREE; this.GLTFLoader = window.THREE.GLTFLoader; this.OrbitControls = window.THREE.OrbitControls;
+      this.ready = true; this.loading = false; cb && cb(true); return;
+    }
     this.loading = true; this._q = [cb];
     const self = this;
     const done = ok => {
@@ -1655,10 +1660,10 @@ const Pet3DGLB = {
       const ip = (now - (this._idleT0 || 0)) / 650;
       if (ip >= 0 && ip < 1 && !this.act) {
         const is = Math.sin(ip * Math.PI);
-        if (this.idleKind === 'shake') { rz += Math.sin(ip * Math.PI * 7) * .13; ry += Math.sin(ip * Math.PI * 6) * .22; }
-        else if (this.idleKind === 'hop') { py += is * .22; sy += is * .07; sx -= is * .05; }
-        else if (this.idleKind === 'flick') { rx += Math.sin(ip * Math.PI * 8) * .10; }
-        else { ry += is * .90; }
+        if (this.idleKind === 'shake') { rz += Math.sin(ip * Math.PI * 7) * .16; ry += Math.sin(ip * Math.PI * 6) * .34; }
+        else if (this.idleKind === 'hop') { py += is * .34; sy += is * .10; sx -= is * .07; }
+        else if (this.idleKind === 'flick') { rx += Math.sin(ip * Math.PI * 8) * .15; }
+        else { ry += is * 1.10; }
       }
 
       /* —— 动作叠加 —— */
@@ -1670,14 +1675,14 @@ const Pet3DGLB = {
           const s = Math.sin(p * Math.PI);                 // 0→1→0
           switch (A.name) {
             case 'poke': case 'pounce':                    // 逗猫/扑：蓄力后前扑
-              pz += s * .55; py += Math.sin(p * Math.PI * 2) * .22;
-              rx += -s * .26; sy += s * .05;
+              pz += s * .85; py += Math.sin(p * Math.PI * 2) * .34;
+              rx += -s * .40; sy += s * .08;
               break;
             case 'ball': case 'chase':                     // 追球：左右冲刺 + 侧倾
-              px += Math.sin(p * Math.PI * 2) * .75;
-              rz += -Math.sin(p * Math.PI * 2) * .18;
-              ry += Math.sin(p * Math.PI * 2) * .9;
-              py += Math.abs(Math.sin(p * Math.PI * 6)) * .14;
+              px += Math.sin(p * Math.PI * 2) * 1.15;
+              rz += -Math.sin(p * Math.PI * 2) * .28;
+              ry += Math.sin(p * Math.PI * 2) * 1.35;
+              py += Math.abs(Math.sin(p * Math.PI * 6)) * .22;
               break;
             case 'comb': case 'brush':                     // 梳毛：舒服地扭动
               rz += Math.sin(p * Math.PI * 7) * .13;
@@ -1689,9 +1694,9 @@ const Pet3DGLB = {
               rx += s * .10; py -= s * .05;
               break;
             case 'walk':                                   // 散步：左右踱步 + 转身
-              px += Math.sin(p * Math.PI * 2) * .62;
-              ry += Math.sin(p * Math.PI * 2) * 1.1;
-              py += Math.abs(Math.sin(p * Math.PI * 8)) * .09;
+              px += Math.sin(p * Math.PI * 2) * .95;
+              ry += Math.sin(p * Math.PI * 2) * 1.55;
+              py += Math.abs(Math.sin(p * Math.PI * 8)) * .14;
               break;
             case 'snap': case 'photo':                     // 拍照：转正面 + 挺身
               ry *= (1 - s); py += s * .13; sy += s * .07; sx -= s * .04;
@@ -1701,10 +1706,10 @@ const Pet3DGLB = {
               py -= s * .07;
               break;
             default:                                       // bounce：弹跳两下
-              py += Math.abs(Math.sin(p * Math.PI * 2)) * .40;
-              sy += Math.sin(p * Math.PI * 2) * .06;
-              sx -= Math.sin(p * Math.PI * 2) * .04;
-              rz += Math.sin(p * Math.PI * 3) * .07;
+              py += Math.abs(Math.sin(p * Math.PI * 2)) * .62;
+              sy += Math.sin(p * Math.PI * 2) * .09;
+              sx -= Math.sin(p * Math.PI * 2) * .06;
+              rz += Math.sin(p * Math.PI * 3) * .10;
           }
         }
       }

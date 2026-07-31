@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>寻己 · 宠物成长图鉴</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 48px;
+    background: linear-gradient(180deg, #faf6ee 0%, #f3ece0 100%);
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    color: #4a3f33;
+  }
+  h1 { text-align: center; font-size: 24px; margin: 0 0 6px; letter-spacing: 2px; }
+  .sub { text-align: center; color: #9a8b78; font-size: 13px; margin-bottom: 30px; }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .card {
+    background: #fffdf8; border: 1px solid #e6dbc9; border-radius: 18px;
+    padding: 18px 14px 16px; text-align: center;
+    box-shadow: 0 4px 16px rgba(120, 96, 60, .08);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(120, 96, 60, .16); }
+  .card img { width: 100%; max-width: 170px; height: auto; display: block; margin: 0 auto 10px; }
+  .stage { font-size: 12px; color: #b09b7f; letter-spacing: 1px; }
+  .name { font-size: 17px; font-weight: 600; margin: 4px 0 6px; }
+  .exp { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px;
+         background: #f3e7d2; color: #96794f; }
+  .note { max-width: 1120px; margin: 30px auto 0; font-size: 13px; color: #8d7f6d;
+          background: #fffdf8; border: 1px dashed #ddd0ba; border-radius: 14px; padding: 14px 18px; line-height: 1.9; }
+</style>
+</head>
+<body>
+  <h1>🐾 寻己 · 宠物成长图鉴</h1>
+  <div class="sub">孩子激励模块 · 参考你家猫咪生成的 5 个成长阶段</div>
+
+  <div class="wrap">
+    <div class="card">
+      <img src="assets/宠物_1_神秘蛋.png" alt="神秘蛋" />
+      <div class="stage">阶段 1</div><div class="name">神秘蛋</div><div class="exp">0 经验解锁</div>
+    </div>
+    <div class="card">
+      <img src="assets/宠物_2_破壳喵.png" alt="破壳喵" />
+      <div class="stage">阶段 2</div><div class="name">破壳喵</div><div class="exp">10 经验解锁</div>
+    </div>
+    <div class="card">
+      <img src="assets/宠物_3_幼年喵.png" alt="幼年喵" />
+      <div class="stage">阶段 3</div><div class="name">幼年喵</div><div class="exp">30 经验解锁</div>
+    </div>
+    <div class="card">
+      <img src="assets/宠物_4_少年喵.png" alt="少年喵" />
+      <div class="stage">阶段 4</div><div class="name">少年喵</div><div class="exp">70 经验解锁</div>
+    </div>
+    <div class="card">
+      <img src="assets/宠物_5_威风大喵.png" alt="威风大喵" />
+      <div class="stage">阶段 5</div><div class="name">威风大喵</div><div class="exp">130 经验解锁</div>
+    </div>
+  </div>
+
+  <div class="note">
+    · 幼年喵参考「小时候」那张照片，威风大喵参考「长大一点」那张，戴红项圈金坠。<br />
+    · 软件里显示的是压缩后的 160px 版本（内嵌在 icons.js，总计约 25KB）；这里看到的是 1024px 原图。<br />
+    · 想换掉哪一张，把新照片发我重新生成即可。
+  </div>
+</body>
+</html>
