@@ -1,6 +1,6 @@
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260801n16';                               // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260801n17';                               // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -1415,7 +1415,8 @@ function petVisualHtml(stage) {
 }
 function animatePet(anim) {
   if (PetCat3D.ready) {
-    const m = { bounce: 'bounce', pounce: 'stand', chase: 'walk', ball: 'walk', comb: 'sit', brush: 'sit', sun: 'sit', walk: 'walk', snap: 'idle', photo: 'idle', chew: 'sit' };
+    // 星星动作 → 3D 猫动作映射（逗猫棒=play带逗猫棒，散步=walk，梳毛=sit，晒太阳=idle，拍合照=bounce）
+    const m = { bounce: 'bounce', poke: 'play', pounce: 'play', chase: 'play', ball: 'play', comb: 'sit', brush: 'sit', sun: 'idle', walk: 'walk', snap: 'bounce', photo: 'bounce', chew: 'sit' };
     PetCat3D.play(m[anim] || 'idle');
     return;
   }
@@ -1785,11 +1786,11 @@ const PetCat3D = {
     rd.setClearColor(0x000000, 0);
     if (T.sRGBEncoding !== undefined) rd.outputEncoding = T.sRGBEncoding;
     this.renderer = rd; rd.domElement.className = 'pet-3d-canvas';
-    scene.add(new T.AmbientLight(0xffffff, .85));
-    scene.add(new T.HemisphereLight(0xffffff, 0x95a3b3, .6));
-    const key = new T.DirectionalLight(0xffffff, 1.05); key.position.set(2.4, 4.2, 3); scene.add(key);
-    const rim = new T.DirectionalLight(0xffffff, .5); rim.position.set(-3, 2, -2.4); scene.add(rim);
-    const fill = new T.DirectionalLight(0xffffff, .35); fill.position.set(0, -1, 3); scene.add(fill);
+    scene.add(new T.AmbientLight(0xffffff, .65));
+    scene.add(new T.HemisphereLight(0xffffff, 0x8a9299, .5));
+    const key = new T.DirectionalLight(0xffffff, .95); key.position.set(2.4, 4.2, 3); scene.add(key);
+    const rim = new T.DirectionalLight(0xffeedd, .4); rim.position.set(-3, 2, -2.4); scene.add(rim);
+    const fill = new T.DirectionalLight(0xffffff, .25); fill.position.set(0, -1, 3); scene.add(fill);
     const root = new T.Group(); scene.add(root); this.root = root;
     this.buildCat(); this.buildWand();
     if (T.OrbitControls) {
@@ -1809,7 +1810,7 @@ const PetCat3D = {
 
   buildCat() {
     const T = this.T;
-    const FUR = 0x9aa3ab, FUR2 = 0x828b94, BELLY = 0xeef1f3, PINK = 0xf6b8c4, DARK = 0x2b2b30, GREEN = 0x8fd17a;
+    const FUR = 0x6b5c4e, FUR2 = 0x5a4d42, BELLY = 0xf0e6dc, PINK = 0xf0a0b4, DARK = 0x1a1a1e, GREEN = 0x7bc96d;   // 深灰狸花猫色（不再发白）
     const body = new T.Group(); this.root.add(body); this.parts.body = body;
     const torso = this.sph(1, FUR); torso.scale.set(.46, .42, .62); torso.position.set(0, .58, 0); body.add(torso);
     const belly = this.sph(1, BELLY); belly.scale.set(.34, .3, .5); belly.position.set(0, .5, .12); body.add(belly);
@@ -1830,6 +1831,9 @@ const PetCat3D = {
     });
     const nose = this.cone(.05, .06, PINK); nose.position.set(0, -.04, .34); nose.rotation.x = Math.PI / 2; head.add(nose);
     [-1, 1].forEach(s => { for (let i = 0; i < 3; i++) { const w = this.cyl(.006, .006, .26, DARK); w.rotation.z = Math.PI / 2; w.rotation.y = .25 * s; w.position.set(.12 * s, -.02 + i * .05, .3); head.add(w); } });
+    /* 虎斑条纹（额头 M 纹 + 脸侧条纹） */
+    [0, .08, -.08].forEach(zz => { const str = this.sph(.06, FUR2); str.scale.set(.4, .08, .15); str.position.set(0, .14, .22 + zz); head.add(str); });
+    [-1, 1].forEach(s => { const str = this.sph(.055, FUR2); str.scale.set(.12, .18, .08); str.position.set(.2 * s, .04, .22); head.add(str); });
 
     const tail = new T.Group(); tail.position.set(0, .62, -.5); body.add(tail); this.parts.tail = tail;
     let prev = tail;
@@ -1846,6 +1850,8 @@ const PetCat3D = {
     });
     this.parts.legs = legs;
     const acc = new T.Group(); body.add(acc); this.parts.acc = acc;
+    /* 背部虎斑条纹 */
+    for (let i = 0; i < 3; i++) { const str = this.sph(.08, FUR2); str.scale.set(.25, .06, .18); str.position.set(0, .78 - i * .14, -.1 + i * .04); body.add(str); }
   },
 
   buildWand() {
@@ -2122,20 +2128,6 @@ function renderChild() {
   renderPetActs();
   renderPetAlbum();
   renderChildStats();
-  /* 3D 小猫动作按钮（免费，纯动画） */
-  const ab = $('petAnimBar');
-  if (ab && !ab._built) {
-    const acts = [{ k: 'play', i: '🪶', n: '逗猫棒' }, { k: 'sit', i: '🐾', n: '坐下' }, { k: 'stand', i: '🧍', n: '站立' }, { k: 'walk', i: '🚶', n: '走路' }, { k: 'idle', i: '😺', n: '待机' }];
-    ab.innerHTML = acts.map(a => '<button class="pet-anim-btn" data-k="' + a.k + '">' + a.i + ' ' + a.n + '</button>').join('');
-    ab.querySelectorAll('.pet-anim-btn').forEach(b => {
-      b.onclick = () => {
-        if (petStage(S.life.child.pet.exp).key === 'egg') { toast('还没破壳呢，先喂食帮它长大吧 🥚'); return; }
-        PetCat3D.play(b.dataset.k);
-        if (b.dataset.k === 'play') playPetProp('poke');
-      };
-    });
-    ab._built = true;
-  }
   renderArchive();
   { const c = S.life.child, today = todayStr(); const a = (c.archive || []).find(x => x.date === today); const h = $('childArchiveHint'); if (h) h.textContent = a ? '今日已归档 ✓' : ''; const cnt = $('childArchiveCount'); if (cnt) cnt.textContent = (c.archive || []).length; }
   /* 徽章区 */
