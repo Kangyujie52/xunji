@@ -350,6 +350,7 @@
                 <div class="hint" style="margin:10px 0 6px;">🏅 打卡徽章（连续完成任务解锁）　连续 <b id="childStreak">0</b> 天</div>
                 <div class="pet-badges" id="childBadges"></div>
               </div>
+              <div class="child-stats" id="childStats"></div>
             </div>
             <!-- 今日任务 -->
             <div class="card glass">
@@ -369,7 +370,13 @@
               <div class="msg-box" id="childMsg" style="margin-top:12px;">点击「换一句」给孩子打气 ✨</div>
               <div class="row">
                 <button class="btn ghost sm" id="childMsgBtn">换一句鼓励</button>
+                <button class="btn ghost sm" id="childArchiveBtn">📦 归档今日</button>
+                <span class="hint" style="margin:0;" id="childArchiveHint"></span>
               </div>
+              <details class="tags-box" style="margin-top:10px;">
+                <summary>📦 任务归档（<span id="childArchiveCount">0</span> 天）</summary>
+                <div class="archive-list" id="childArchiveList" style="max-height:240px;margin-top:10px;overflow-y:auto;"></div>
+              </details>
             </div>
           </div>
         </section>

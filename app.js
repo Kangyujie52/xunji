@@ -1,6 +1,6 @@
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260731n12';                               // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260801n14';                               // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -30,7 +30,7 @@ const DEFAULT = {
         { id: 'ct2', text: '阅读30分钟', stars: 1, doneDates: {} },
         { id: 'ct3', text: '整理书桌/收拾玩具', stars: 1, doneDates: {} }
       ],
-      days: {}, badges: {}
+      days: {}, badges: {}, archive: []
     },
     english: [],
     stocks: { watch: [], notes: [] }
@@ -73,7 +73,7 @@ function normalize(d) {
     c.remind = Object.assign({ on: false, time: '20:00' }, c.remind || {});
   });
   // 孩子激励：旧版（points/goals）→ 养宠版（stars/tasks/pet）迁移
-  L.child = Object.assign({ stars: 0, tasks: [], days: {}, badges: {}, pet: null }, L.child || {});
+  L.child = Object.assign({ stars: 0, tasks: [], days: {}, badges: {}, pet: null, archive: [] }, L.child || {});
   if (typeof L.child.points === 'number') { L.child.stars = (L.child.stars || 0) + L.child.points; delete L.child.points; }
   if (Array.isArray(L.child.goals)) {
     L.child.goals.forEach(g => L.child.tasks.push({ id: g.id || uid(), text: g.text || '', stars: 1, doneDates: g.done ? { [todayStr()]: 1 } : {} }));
@@ -321,6 +321,7 @@ function renderHome() {
     const items = [
       { ico: '✅', label: '今日打卡', val: todayCheckinCount() + ' 次' },
       { ico: '💰', label: '今日支出', val: '¥' + todayExpense().toFixed(2) },
+      { ico: '🌟', label: '孩子⭐', val: (S.life.child.stars || 0) + ' 颗' },
       { ico: '📈', label: '关注股票', val: (S.life.stocks.watch || []).length + ' 支' },
       { ico: '🔤', label: '英语单词', val: (S.life.english || []).length + ' 个' },
     ];
@@ -1413,7 +1414,7 @@ function petVisualHtml(stage) {
   return petSvg(stage.key, petExpr());   // 兜底：仍用 SVG
 }
 function animatePet(anim) {
-  if (Pet3DGLB.ready) Pet3DGLB.play(anim || 'bounce');     // 3D 就绪 → 切换对应姿态
+  /* 3D GLB 已禁用，仅保留 CSS 动画 */
   const v = $('petVisual'); if (!v) return;
   const body = v.querySelector('.pet-body') || v;
   body.classList.remove('bounce', 'pounce', 'chase', 'brush', 'sun', 'walk', 'snap', 'chew');
@@ -1866,17 +1867,12 @@ function renderChild() {
   const c = S.life.child; const p = c.pet;
   applyPetDecay();
   $('childStars').textContent = c.stars || 0;
-  /* 宠物区 */
+  /* 宠物区：用卡通 PNG 图片显示（稳定、快速、永不空白）*/
   const st = petStage(p.exp), next = petNextStage(p.exp);
   $('petVisual').innerHTML = '<div class="pet-body">' + petVisualHtml(st) + '</div>'
-    + '<div class="pet-3d" id="pet3d"></div>'
     + '<div class="pet-prop" id="petProp"></div><div class="pet-bubble" id="petBubble"></div>';
   const pv = $('petVisual'); if (pv) pv.onclick = petTap;
-  if (st.key !== 'egg') {
-    Pet3DGLB.mount($('pet3d'), st.key);
-  } else {
-    Pet3DGLB.showFallback();
-  }
+  /* 不再加载 3D GLB 模型（GitHub Pages 上旧文件 45MB 导致超时空白），统一用 icons.js 中的卡通 PNG */
   $('petName').textContent = p.name || '小猫咪';
   $('petLv').textContent = 'Lv.' + (PET_STAGES.indexOf(st) + 1) + ' · ' + st.name;
   $('petTalk').textContent = petTalkLine();
@@ -1890,6 +1886,9 @@ function renderChild() {
   $('petMoodVal').textContent = (p.mood || 0) + '/100';
   renderPetActs();
   renderPetAlbum();
+  renderChildStats();
+  renderArchive();
+  { const c = S.life.child, today = todayStr(); const a = (c.archive || []).find(x => x.date === today); const h = $('childArchiveHint'); if (h) h.textContent = a ? '今日已归档 ✓' : ''; const cnt = $('childArchiveCount'); if (cnt) cnt.textContent = (c.archive || []).length; }
   /* 徽章区 */
   const streak = childStreak();
   $('childStreak').textContent = streak;
@@ -1925,10 +1924,58 @@ function renderChild() {
       save(); renderChild();
     };
     const b = document.createElement('div'); b.className = 'body';
-    b.innerHTML = `<div class="txt">${esc(t.text)} <span style="color:var(--accent);font-size:12px;">⭐×${t.stars || 1}</span></div>`;
+    b.innerHTML = `<div class="txt"><span class="task-text" title="点击修改内容">${esc(t.text)}</span> <span class="task-stars" title="点击调整星星值">⭐×${t.stars || 1}</span></div>`;
+    b.querySelector('.task-text').onclick = () => {
+      const v = prompt('修改任务内容：', t.text);
+      if (v && v.trim()) { t.text = v.trim().slice(0, 40); save(); renderChild(); }
+    };
+    b.querySelector('.task-stars').onclick = () => {
+      const old = t.stars || 1, nv = ({ 1: 2, 2: 3, 3: 5, 5: 1 })[old] || 1;
+      t.stars = nv;
+      if (t.doneDates[todayStr()]) c.stars = (c.stars || 0) + (nv - old);   // 今日已完成则同步星星余额
+      save(); renderChild();
+    };
     const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕';
     x.onclick = () => { if (!confirm('删除任务「' + t.text + '」？')) return; c.tasks = c.tasks.filter(y => y.id !== t.id); save(); renderChild(); };
     item.append(ck, b, x); list.append(item);
+  });
+}
+function renderChildStats() {
+  const c = S.life.child;
+  const el = $('childStats'); if (!el) return;
+  el.innerHTML =
+    '<div class="cstat"><div class="csv">' + (c.stars || 0) + '</div><div class="csl">当前⭐</div></div>'
+    + '<div class="cstat"><div class="csv">' + childStreak() + '</div><div class="csl">连续打卡</div></div>'
+    + '<div class="cstat"><div class="csv">' + Object.keys(c.days || {}).length + '</div><div class="csl">累计打卡天</div></div>'
+    + '<div class="cstat"><div class="csv">' + (c.tasks || []).length + '</div><div class="csl">任务数</div></div>';
+}
+function archiveToday() {
+  const c = S.life.child, today = todayStr();
+  const done = c.tasks.filter(t => t.doneDates[today]).map(t => ({ text: t.text, stars: t.stars || 1 }));
+  if (!done.length) { toast('今天还没有完成的任务，先去打卡吧 ✅'); return; }
+  c.archive = c.archive || [];
+  const exist = c.archive.find(a => a.date === today);
+  if (exist) { exist.items = done; exist.at = Date.now(); toast('已更新今日归档（' + done.length + ' 项）📦'); }
+  else { c.archive.unshift({ date: today, items: done, at: Date.now() }); toast('已归档今日 ' + done.length + ' 项任务 📦'); }
+  save(); renderChild();
+}
+function renderArchive() {
+  const c = S.life.child, box = $('childArchiveList'); if (!box) return;
+  const ar = (c.archive || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (!ar.length) { box.innerHTML = '<div class="empty">还没有归档记录。每天完成任务后点「归档今日」，留一份成长纪念 📦</div>'; return; }
+  box.innerHTML = '';
+  ar.forEach(a => {
+    const items = a.items || [];
+    const earn = items.reduce((s, x) => s + (x.stars || 1), 0);
+    const item = document.createElement('div'); item.className = 'archive-day';
+    const head = document.createElement('div'); head.className = 'ad-head';
+    head.innerHTML = '<b>' + esc(a.date) + '</b><span class="ad-meta">完成 ' + items.length + ' 项 · 得 ⭐' + earn + '</span>';
+    const del = document.createElement('span'); del.className = 'x'; del.textContent = '✕'; del.title = '删除这天的归档';
+    del.onclick = () => { if (confirm('删除 ' + a.date + ' 的归档记录？')) { c.archive = c.archive.filter(x => x !== a); save(); renderChild(); } };
+    head.append(del);
+    const ul = document.createElement('div'); ul.className = 'ad-items';
+    ul.innerHTML = items.map(x => '<div class="ad-t">✅ ' + esc(x.text) + (x.stars ? ' <span class="ad-s">⭐×' + x.stars + '</span>' : '') + '</div>').join('');
+    item.append(head, ul); box.append(item);
   });
 }
 $('petFeed').onclick = () => {
@@ -1958,6 +2005,7 @@ $('childMsgBtn').onclick = () => {
   let m; do { m = CHEERS[Math.floor(Math.random() * CHEERS.length)]; } while (m === $('childMsg').textContent && CHEERS.length > 1);
   $('childMsg').textContent = m;
 };
+$('childArchiveBtn').onclick = archiveToday;
 
 /* ===================== 生活·英语学习 ===================== */
 function renderEnglish() {

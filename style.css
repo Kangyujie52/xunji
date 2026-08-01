@@ -536,6 +536,27 @@ textarea { resize: vertical; min-height: 44px; }
 .points { font-size: 22px; font-weight: 700; color: var(--accent-2); }
 .msg-box { background: var(--pink-soft-bg); border: 1px solid var(--pink-soft-border); border-radius: 12px; padding: 12px 14px; font-size: 15px; line-height: 1.5; margin-bottom: 10px; min-height: 52px; display: flex; align-items: center; }
 
+/* 孩子激励 · 累计进度 */
+.child-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.cstat { background: var(--item-bg); border: 1px solid var(--item-border); border-radius: 12px; padding: 8px 4px; text-align: center; }
+.cstat .csv { font-size: 18px; font-weight: 700; color: var(--text-strong); }
+.cstat .csl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+/* 任务归档 */
+.archive-list { display: flex; flex-direction: column; gap: 10px; }
+.archive-day { background: var(--item-bg); border: 1px solid var(--item-border); border-radius: 12px; padding: 8px 10px; }
+.ad-head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.ad-head b { color: var(--text-strong); }
+.ad-head .x { margin-left: 6px; }
+.ad-meta { margin-left: auto; color: var(--text-faint); font-size: 11px; }
+.ad-items { margin-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.ad-t { font-size: 13px; color: var(--text-dim); }
+.ad-t .ad-s { color: var(--accent); font-size: 11px; font-weight: 600; }
+/* 任务内联编辑 */
+.task-text { cursor: pointer; border-bottom: 1px dashed transparent; }
+.task-text:hover { border-bottom-color: var(--accent); }
+.task-stars { cursor: pointer; font-weight: 600; }
+.task-stars:hover { opacity: .75; }
+
 /* 通用空状态 */
 .empty { color: var(--text-faint); font-size: 13px; text-align: center; padding: 18px 0; }
 

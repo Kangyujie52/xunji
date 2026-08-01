@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新 3D 小猫预览（坐姿）</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; background: #eef1f5; font-family: system-ui, sans-serif; }
+    model-viewer { width: 100vw; height: 100vh; }
+    .tag { position: fixed; top: 12px; left: 12px; background: rgba(0,0,0,.55); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 13px; z-index: 2; }
+  </style>
+</head>
+<body>
+  <div class="tag">新 3D 小猫 · 坐姿（视频原猫参考 · 真实 PBR）</div>
+  <model-viewer src="assets/cat_sit.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" environment-image="neutral"></model-viewer>
+</body>
+</html>
