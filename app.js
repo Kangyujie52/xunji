@@ -1,6 +1,6 @@
 /* ===================== 个人工作台 · 逻辑层（云端同步版 · 多账本） ===================== */
 const KEY = 'workstation_v1';
-const APP_VERSION = '20260801n14';                               // 程序版本号（与 _publish_app.py 保持一致）
+const APP_VERSION = '20260801n16';                               // 程序版本号（与 _publish_app.py 保持一致）
 const APP_BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019fb66b-321a-7c45-9520-56f68e87b0bd';  // 云端登记的「最新版本号」
 const APP_HOME_URL = 'https://kangyujie52.github.io/xunji/';       // GitHub Pages 在线首页（更新按钮跳转目标）
 
@@ -1414,7 +1414,12 @@ function petVisualHtml(stage) {
   return petSvg(stage.key, petExpr());   // 兜底：仍用 SVG
 }
 function animatePet(anim) {
-  /* 3D GLB 已禁用，仅保留 CSS 动画 */
+  if (PetCat3D.ready) {
+    const m = { bounce: 'bounce', pounce: 'stand', chase: 'walk', ball: 'walk', comb: 'sit', brush: 'sit', sun: 'sit', walk: 'walk', snap: 'idle', photo: 'idle', chew: 'sit' };
+    PetCat3D.play(m[anim] || 'idle');
+    return;
+  }
+  /* 兜底：无 3D 时用 CSS 动画 */
   const v = $('petVisual'); if (!v) return;
   const body = v.querySelector('.pet-body') || v;
   body.classList.remove('bounce', 'pounce', 'chase', 'brush', 'sun', 'walk', 'snap', 'chew');
@@ -1747,6 +1752,229 @@ const Pet3DGLB = {
     if (this._resizeBound) window.removeEventListener('resize', this._resizeBound);
   }
 };
+
+/* ============================================================
+   PetCat3D —— 纯几何体程序化搭建的可动 3D 小猫（无外部资源、离线可用、不会空白）
+   动作：idle 待机 / sit 坐下 / stand 站立 / walk 走路 / play 逗猫棒(站立抓逗猫棒) / bounce 点击跳一下
+   支持拖拽旋转；不同阶段有不同配饰（破壳帽/围巾/皇冠）与体型。
+   ============================================================ */
+const PetCat3D = {
+  ready: false, failed: false, inited: false, active: false,
+  T: null, host: null, renderer: null, scene: null, camera: null, controls: null, raf: 0,
+  root: null, parts: {}, wand: null, stageKey: 'kid', state: 'idle', act: null, t0: 0,
+  _dragging: false, _resizeBound: null, _last: 0, _w: 0, _h: 0, _scale: 0.9, _lastStage: null, _c: null,
+
+  mat(c, o) { const T = this.T; return new T.MeshStandardMaterial(Object.assign({ color: c, roughness: .82, metalness: 0 }, o || {})); },
+  sph(r, c, o) { const T = this.T; return new T.Mesh(new T.SphereGeometry(r, 22, 16), this.mat(c, o)); },
+  cyl(rt, rb, h, c, o) { const T = this.T; return new T.Mesh(new T.CylinderGeometry(rt, rb, h, 16), this.mat(c, o)); },
+  cone(r, h, c, o) { const T = this.T; return new T.Mesh(new T.ConeGeometry(r, h, 18), this.mat(c, o)); },
+
+  ensure() {
+    if (this.failed) return false;
+    if (!window.THREE) { this.failed = true; return false; }
+    if (!this.inited) this.init();
+    return this.ready;
+  },
+
+  init() {
+    const T = window.THREE; this.T = T;
+    const scene = new T.Scene(); this.scene = scene;
+    const cam = new T.PerspectiveCamera(42, 1, .1, 100); cam.position.set(0, 1.2, 3.7); cam.lookAt(0, .85, 0); this.camera = cam;
+    const rd = new T.WebGLRenderer({ alpha: true, antialias: true });
+    rd.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); rd.setSize(240, 240);
+    rd.setClearColor(0x000000, 0);
+    if (T.sRGBEncoding !== undefined) rd.outputEncoding = T.sRGBEncoding;
+    this.renderer = rd; rd.domElement.className = 'pet-3d-canvas';
+    scene.add(new T.AmbientLight(0xffffff, .85));
+    scene.add(new T.HemisphereLight(0xffffff, 0x95a3b3, .6));
+    const key = new T.DirectionalLight(0xffffff, 1.05); key.position.set(2.4, 4.2, 3); scene.add(key);
+    const rim = new T.DirectionalLight(0xffffff, .5); rim.position.set(-3, 2, -2.4); scene.add(rim);
+    const fill = new T.DirectionalLight(0xffffff, .35); fill.position.set(0, -1, 3); scene.add(fill);
+    const root = new T.Group(); scene.add(root); this.root = root;
+    this.buildCat(); this.buildWand();
+    if (T.OrbitControls) {
+      const ctrl = new T.OrbitControls(cam, rd.domElement);
+      ctrl.enableDamping = true; ctrl.dampingFactor = .08; ctrl.enablePan = false;
+      ctrl.minDistance = 2.3; ctrl.maxDistance = 6.2; ctrl.minPolarAngle = .45; ctrl.maxPolarAngle = 2.35;
+      ctrl.target.set(0, .85, 0);
+      ctrl.addEventListener('start', () => { this._dragging = true; });
+      ctrl.addEventListener('end', () => { const s = this; setTimeout(() => { s._dragging = false; }, 80); });
+      this.controls = ctrl;
+      rd.domElement.addEventListener('click', (e) => { if (!this._dragging) { e.stopPropagation(); this.play('bounce'); try { showPetBubble('喵～'); } catch (er) {} } });
+    }
+    this.t0 = performance.now(); this._last = this.t0; this.inited = true; this.ready = true;
+    this._c = { bodyRX: 0, bodyY: 0, headRX: 0, headRY: 0, headRZ: 0, tailRZ: 0, tailRX: 0, fL: 0, fR: 0, bL: 0, bR: 0, rootY: 0 };
+    this.animate();
+  },
+
+  buildCat() {
+    const T = this.T;
+    const FUR = 0x9aa3ab, FUR2 = 0x828b94, BELLY = 0xeef1f3, PINK = 0xf6b8c4, DARK = 0x2b2b30, GREEN = 0x8fd17a;
+    const body = new T.Group(); this.root.add(body); this.parts.body = body;
+    const torso = this.sph(1, FUR); torso.scale.set(.46, .42, .62); torso.position.set(0, .58, 0); body.add(torso);
+    const belly = this.sph(1, BELLY); belly.scale.set(.34, .3, .5); belly.position.set(0, .5, .12); body.add(belly);
+    const rump = this.sph(1, FUR); rump.scale.set(.42, .4, .4); rump.position.set(0, .6, -.3); body.add(rump);
+    const chest = this.sph(1, FUR); chest.scale.set(.36, .36, .4); chest.position.set(0, .66, .3); body.add(chest);
+
+    const head = new T.Group(); head.position.set(0, .98, .34); body.add(head); this.parts.head = head;
+    const skull = this.sph(1, FUR); skull.scale.set(.34, .32, .34); head.add(skull);
+    const face = this.sph(1, BELLY); face.scale.set(.26, .24, .22); face.position.set(0, -.04, .16); head.add(face);
+    [-1, 1].forEach(s => {
+      const ear = this.cone(.13, .26, FUR); ear.position.set(.17 * s, .28, 0); ear.rotation.z = .32 * s; head.add(ear);
+      const inner = this.cone(.07, .18, PINK); inner.position.set(.17 * s, .27, .03); inner.rotation.z = .32 * s; head.add(inner);
+    });
+    [-1, 1].forEach(s => {
+      const iris = this.sph(.075, GREEN); iris.position.set(.13 * s, .05, .27); head.add(iris);
+      const pupil = this.sph(.04, DARK); pupil.scale.set(.5, 1.3, .5); pupil.position.set(.13 * s, .05, .32); head.add(pupil);
+      const hl = this.sph(.018, 0xffffff); hl.position.set(.13 * s + .02, .08, .33); head.add(hl);
+    });
+    const nose = this.cone(.05, .06, PINK); nose.position.set(0, -.04, .34); nose.rotation.x = Math.PI / 2; head.add(nose);
+    [-1, 1].forEach(s => { for (let i = 0; i < 3; i++) { const w = this.cyl(.006, .006, .26, DARK); w.rotation.z = Math.PI / 2; w.rotation.y = .25 * s; w.position.set(.12 * s, -.02 + i * .05, .3); head.add(w); } });
+
+    const tail = new T.Group(); tail.position.set(0, .62, -.5); body.add(tail); this.parts.tail = tail;
+    let prev = tail;
+    for (let i = 0; i < 5; i++) { const seg = new T.Group(); seg.position.set(0, 0, -.18); seg.rotation.x = .16; const r = .1 - i * .013; const m = this.sph(1, FUR); m.scale.set(r, r, r * 1.5); m.position.y = -.09; seg.add(m); prev.add(seg); prev = seg; }
+
+    const legs = {};
+    const def = [['fL', .22, .3], ['fR', -.22, .3], ['bL', .26, -.28], ['bR', -.26, -.28]];
+    def.forEach(([nm, x, z]) => {
+      const leg = new T.Group(); leg.position.set(x, .6, z); body.add(leg);
+      const up = this.cyl(.085, .07, .34, FUR); up.position.y = -.17; leg.add(up);
+      const lo = this.cyl(.07, .055, .32, FUR2); lo.position.y = -.46; leg.add(lo);
+      const paw = this.sph(1, BELLY); paw.scale.set(.1, .06, .14); paw.position.set(0, -.64, .03); leg.add(paw);
+      legs[nm] = leg;
+    });
+    this.parts.legs = legs;
+    const acc = new T.Group(); body.add(acc); this.parts.acc = acc;
+  },
+
+  buildWand() {
+    const T = this.T;
+    const wand = new T.Group();
+    const stick = this.cyl(.02, .02, 1.1, 0xb98a5a); stick.position.y = .55; wand.add(stick);
+    const f1 = this.cone(.13, .32, 0xff7aa2); f1.position.y = 1.18; wand.add(f1);
+    const f2 = this.cone(.1, .26, 0xffd166); f2.position.set(.09, 1.12, .05); f2.rotation.z = .4; wand.add(f2);
+    wand.position.set(.3, .25, .7); wand.rotation.z = -.25; wand.visible = false;
+    this.scene.add(wand); this.wand = wand;
+  },
+
+  applyStage(key) {
+    this.stageKey = key || 'kid';
+    const acc = this.parts.acc; if (!acc) return;
+    const scales = { baby: .74, kid: .88, teen: 1.0, adult: 1.16 };
+    this._scale = scales[this.stageKey] || .9;
+    if (this._lastStage === this.stageKey) return; this._lastStage = this.stageKey;
+    while (acc.children.length) acc.remove(acc.children[0]);
+    const T = this.T;
+    if (this.stageKey === 'baby') {
+      const sh = this.sph(1, 0xffffff); sh.scale.set(.3, .16, .3); sh.position.set(0, .32, .04); acc.add(sh);
+      const sh2 = this.sph(1, 0xf0f0f0); sh2.scale.set(.18, .12, .18); sh2.position.set(.18, .28, .05); acc.add(sh2);
+    } else if (this.stageKey === 'teen') {
+      const t = new T.Mesh(new T.TorusGeometry(.22, .06, 10, 22), this.mat(0x4a90d9)); t.rotation.x = Math.PI / 2; t.position.set(0, -.16, .02); acc.add(t);
+    } else if (this.stageKey === 'adult') {
+      const crown = this.cone(.12, .16, 0xffd700); crown.position.set(0, .34, 0); crown.scale.set(1, 1, .7); acc.add(crown);
+      const ball = this.sph(.045, 0xffd700); ball.position.set(0, .43, 0); acc.add(ball);
+    }
+  },
+
+  poseTargets() {
+    const s = this.state;
+    const P = { bodyRX: 0, bodyY: 0, headRX: 0, headRY: 0, headRZ: 0, tailRZ: 0, tailRX: 0, fL: 0, fR: 0, bL: 0, bR: 0, rootY: 0 };
+    if (s === 'sit') { P.bodyRX = .4; P.bodyY = .04; P.bL = 1.2; P.bR = 1.2; P.headRX = .05; P.tailRZ = .2; }
+    else if (s === 'stand' || s === 'play') { P.bodyRX = .55; P.fL = -2.2; P.fR = -2.2; P.bL = .18; P.bR = .18; P.headRX = -.12; P.tailRZ = .1; }
+    else if (s === 'walk') { P.bodyRX = .04; }
+    return P;
+  },
+
+  play(name) {
+    if (!this.ready) return;
+    if (name === 'bounce') { this.act = { name: 'bounce', t0: performance.now(), dur: 620 }; return; }
+    if (['idle', 'sit', 'stand', 'walk', 'play'].indexOf(name) >= 0) this.state = name; else this.state = 'idle';
+  },
+
+  mount(host, stageKey) {
+    if (!host) return;
+    this.host = host;
+    if (!this.ensure()) { this.showFallback(); return; }
+    if (this.renderer.domElement.parentNode !== host) host.appendChild(this.renderer.domElement);
+    host.classList.add('on'); this.active = true;
+    if (stageKey) this.applyStage(stageKey);
+    if (this.state === 'idle' || !this.state) this.play('idle');
+    this.resize();
+    if (!this._resizeBound) { this._resizeBound = () => this.resize(); window.addEventListener('resize', this._resizeBound); }
+  },
+  hide() { this.active = false; if (this.host) this.host.classList.remove('on'); },
+  showFallback() { this.active = false; if (this.host) this.host.classList.remove('on'); },
+
+  resize() {
+    if (!this.renderer || !this.host) return;
+    const w = this.host.clientWidth || 240, h = this.host.clientHeight || 240;
+    if (w <= 0 || h <= 0) return;
+    if (w === this._w && h === this._h) return;
+    this._w = w; this._h = h;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+  },
+
+  animate() {
+    const self = this;
+    this.raf = requestAnimationFrame(() => self.animate());
+    if (!this.renderer || !this.scene || !this.camera) return;
+    const host = this.host;
+    const visible = this.active && host && host.isConnected && host.offsetWidth > 0 && host.offsetHeight > 0;
+    if (!visible) return;
+    if (host.clientWidth !== this._w || host.clientHeight !== this._h) this.resize();
+    const T = this.T, now = performance.now(), t = (now - this.t0) / 1000;
+    const dt = Math.min(0.05, (now - this._last) / 1000) || 0.016; this._last = now;
+    const P = this.poseTargets();
+    const k = Math.min(1, dt * 7);
+    const c = this._c;
+    c.bodyRX += (P.bodyRX - c.bodyRX) * k; c.bodyY += (P.bodyY - c.bodyY) * k;
+    c.headRX += (P.headRX - c.headRX) * k; c.headRY += (P.headRY - c.headRY) * k; c.headRZ += (P.headRZ - c.headRZ) * k;
+    c.tailRZ += (P.tailRZ - c.tailRZ) * k; c.tailRX += (P.tailRX - c.tailRX) * k;
+    c.fL += (P.fL - c.fL) * k; c.fR += (P.fR - c.fR) * k; c.bL += (P.bL - c.bL) * k; c.bR += (P.bR - c.bR) * k;
+    c.rootY += (P.rootY - c.rootY) * k;
+
+    const br = Math.sin(t * 1.6);
+    let breath = 1 + br * 0.015;
+    let bodyY = c.bodyY + br * 0.012;
+    let headRX = c.headRX + Math.sin(t * 1.1) * 0.04;
+    let headRY = c.headRY + Math.sin(t * 0.7) * 0.12;
+    let headRZ = c.headRZ + Math.sin(t * 0.9) * 0.03;
+    let tailWag = Math.sin(t * 2.4) * 0.28 + c.tailRZ;
+    let tailSway = Math.sin(t * 1.7) * 0.12 + c.tailRX;
+    let fL = c.fL, fR = c.fR, bL = c.bL, bR = c.bR, rootY = c.rootY;
+
+    if (this.state === 'walk') {
+      const ph = t * 6.5;
+      fL = Math.sin(ph) * 0.5; fR = Math.sin(ph + Math.PI) * 0.5; bL = Math.sin(ph + Math.PI) * 0.5; bR = Math.sin(ph) * 0.5;
+      bodyY += Math.abs(Math.sin(ph * 2)) * 0.03; headRY += Math.sin(ph) * 0.1;
+    }
+    if (this.state === 'play') {
+      const sw = Math.sin(t * 6) * 0.4;
+      fL = -2.2 + sw; fR = -2.2 - sw;
+      if (this.wand) { this.wand.visible = true; this.wand.position.x = 0.3 + Math.sin(t * 2.2) * 0.5; this.wand.position.y = 0.25 + Math.sin(t * 3.1) * 0.12; this.wand.rotation.z = -0.25 + Math.sin(t * 2.2) * 0.4; }
+    } else if (this.wand) { this.wand.visible = false; }
+
+    const bd = this.parts.body, hd = this.parts.head, tl = this.parts.tail, L = this.parts.legs;
+    bd.rotation.x = c.bodyRX; bd.position.y = bodyY;
+    hd.rotation.set(headRX, headRY, headRZ);
+    tl.rotation.z = tailWag; tl.rotation.x = tailSway;
+    L.fL.rotation.x = fL; L.fR.rotation.x = fR; L.bL.rotation.x = bL; L.bR.rotation.x = bR;
+
+    const sc = this._scale || 1;
+    let bs = breath * sc; this.root.position.y = rootY; this.root.scale.set(bs, bs, bs);
+
+    if (this.act) {
+      const p = (now - this.act.t0) / this.act.dur;
+      if (p >= 1) { this.act = null; }
+      else { const s = Math.abs(Math.sin(p * Math.PI)); this.root.position.y += s * 0.22; const bb = (1 + s * 0.05) * sc; this.root.scale.set(bb, bb, bb); }
+    }
+    if (this.controls) this.controls.update();
+    this.renderer.render(this.scene, this.camera);
+  }
+};
+
 /* 每个陪玩动作对应的“道具/特效”图层 HTML（emoji + 装饰元素，由 CSS 动画驱动） */
 const PET_PROP = {
   poke: '<div class="pp pp-feather">🪶</div><div class="pp pp-dust">✨</div>',
@@ -1867,12 +2095,19 @@ function renderChild() {
   const c = S.life.child; const p = c.pet;
   applyPetDecay();
   $('childStars').textContent = c.stars || 0;
-  /* 宠物区：用卡通 PNG 图片显示（稳定、快速、永不空白）*/
+  /* 宠物区：3D 可动小猫（程序化几何体，离线可用、不会空白）；卡通 PNG 作为降级兜底 */
   const st = petStage(p.exp), next = petNextStage(p.exp);
-  $('petVisual').innerHTML = '<div class="pet-body">' + petVisualHtml(st) + '</div>'
-    + '<div class="pet-prop" id="petProp"></div><div class="pet-bubble" id="petBubble"></div>';
-  const pv = $('petVisual'); if (pv) pv.onclick = petTap;
-  /* 不再加载 3D GLB 模型（GitHub Pages 上旧文件 45MB 导致超时空白），统一用 icons.js 中的卡通 PNG */
+  const pv = $('petVisual');
+  if (!pv.querySelector('.pet-body')) {
+    pv.innerHTML = '<div class="pet-body">' + petVisualHtml(st) + '</div>'
+      + '<div class="pet-3d" id="pet3d"></div>'
+      + '<div class="pet-prop" id="petProp"></div><div class="pet-bubble" id="petBubble"></div>';
+    pv.onclick = petTap;
+  } else {
+    pv.querySelector('.pet-body').innerHTML = petVisualHtml(st);
+  }
+  if (st.key === 'egg') { PetCat3D.hide(); }
+  else { PetCat3D.mount($('pet3d'), st.key); }
   $('petName').textContent = p.name || '小猫咪';
   $('petLv').textContent = 'Lv.' + (PET_STAGES.indexOf(st) + 1) + ' · ' + st.name;
   $('petTalk').textContent = petTalkLine();
@@ -1887,6 +2122,20 @@ function renderChild() {
   renderPetActs();
   renderPetAlbum();
   renderChildStats();
+  /* 3D 小猫动作按钮（免费，纯动画） */
+  const ab = $('petAnimBar');
+  if (ab && !ab._built) {
+    const acts = [{ k: 'play', i: '🪶', n: '逗猫棒' }, { k: 'sit', i: '🐾', n: '坐下' }, { k: 'stand', i: '🧍', n: '站立' }, { k: 'walk', i: '🚶', n: '走路' }, { k: 'idle', i: '😺', n: '待机' }];
+    ab.innerHTML = acts.map(a => '<button class="pet-anim-btn" data-k="' + a.k + '">' + a.i + ' ' + a.n + '</button>').join('');
+    ab.querySelectorAll('.pet-anim-btn').forEach(b => {
+      b.onclick = () => {
+        if (petStage(S.life.child.pet.exp).key === 'egg') { toast('还没破壳呢，先喂食帮它长大吧 🥚'); return; }
+        PetCat3D.play(b.dataset.k);
+        if (b.dataset.k === 'play') playPetProp('poke');
+      };
+    });
+    ab._built = true;
+  }
   renderArchive();
   { const c = S.life.child, today = todayStr(); const a = (c.archive || []).find(x => x.date === today); const h = $('childArchiveHint'); if (h) h.textContent = a ? '今日已归档 ✓' : ''; const cnt = $('childArchiveCount'); if (cnt) cnt.textContent = (c.archive || []).length; }
   /* 徽章区 */

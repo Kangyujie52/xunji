@@ -440,7 +440,16 @@ textarea { resize: vertical; min-height: 44px; }
 .pet-bar-fill.mood { background: linear-gradient(90deg, #c0583a, #f2994a); }
 .pet-bar-val { flex: 0 0 52px; font-size: 11px; color: var(--text-faint); text-align: right; }
 /* 陪玩动作按钮 */
-.pet-acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.pet-anim-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 2px; }
+.pet-anim-btn {
+  flex: 1 1 auto; min-width: 76px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 9px 10px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--card-border); background: var(--panel-bg); color: var(--text);
+  transition: transform .15s, box-shadow .15s, border-color .15s, background .15s;
+}
+.pet-anim-btn:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 6px 14px rgba(0,0,0,.10); background: color-mix(in srgb, var(--accent) 12%, var(--panel-bg)); }
+.pet-anim-btn:active { transform: translateY(0); }
+.pet-acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 4px; }
 .pet-act {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 10px 6px; border-radius: 14px; cursor: pointer;
